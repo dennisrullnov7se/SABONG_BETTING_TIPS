@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sabong Tracker</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-header">
+      <div>
+        <h1>Sabong Tracker</h1>
+        <p>Mobile-friendly tracker with history, streaks, stats, and pattern lookup.</p>
+      </div>
+    </header>
+
+    <nav class="tabs" role="tablist" aria-label="Main navigation">
+      <button class="tab-button active" data-tab="main">Main View</button>
+      <button class="tab-button" data-tab="history">Full History</button>
+      <button class="tab-button" data-tab="meron-wala">Meron/Wala</button>
+      <button class="tab-button" data-tab="lyamado-dehado">Lyamado/Dehado</button>
+      <button class="tab-button" data-tab="statistic">Statistic</button>
+      <button class="tab-button" data-tab="settings">Settings</button>
+    </nav>
+
+    <main class="tab-content">
+      <section id="main" class="tab-pane active" role="tabpanel">
+        <div class="panel-grid">
+          <div class="panel card">
+            <h2>Main Entry</h2>
+            <label>Start#</label>
+            <input id="startNumber" type="number" min="0" placeholder="Enter start number" />
+            <div class="input-row">
+              <div class="input-column">
+                <label>Meron o Wala</label>
+                <select id="winnerSelect">
+                  <option value="Meron">Meron</option>
+                  <option value="Wala">Wala</option>
+                  <option value="NC">NC</option>
+                  <option value="Draw">Draw</option>
+                </select>
+              </div>
+              <div class="input-column">
+                <label>Odds</label>
+                <select id="sideSelect">
+                  <option value="Lyamado">Lyamado</option>
+                  <option value="Dehado">Dehado</option>
+                  <option value="NC">NC</option>
+                  <option value="Draw">Draw</option>
+                </select>
+              </div>
+            </div>
+            <div class="button-row">
+              <button id="undoButton" class="secondary">Undo</button>
+              <button id="redoButton" class="secondary">Redo</button>
+            </div>
+            <div class="button-row">
+              <button id="submitButton" class="primary">Submit</button>
+              <button id="resetButton" class="danger">Reset</button>
+            </div>
+          </div>
+
+          <div class="panel card">
+            <h2>Game Result</h2>
+            <div id="gameResultList" class="result-list"></div>
+          </div>
+        </div>
+
+        <div class="panel card">
+          <h2>Tally Board</h2>
+          <div id="tallySummary" class="help-text"></div>
+          <div class="table-scroll">
+            <table class="results-table">
+              <thead>
+                <tr>
+                  <th>Winner</th>
+                  <th>Count</th>
+                  <th>Percentage</th>
+                </tr>
+              </thead>
+              <tbody id="tallyTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="panel card">
+          <h2>Pusta Na</h2>
+          <div id="pustaNaCard" class="pusta-card">PASS</div>
+          <p class="help-text">Suggestion is based on the last 10 entries and Settings patterns. If no pattern matches, it remains PASS.</p>
+        </div>
+      </section>
+
+      <section id="history" class="tab-pane" role="tabpanel">
+        <div class="panel card">
+          <h2>Full History</h2>
+          <div class="table-scroll">
+            <table class="history-table">
+              <thead>
+                <tr>
+                  <th>Start</th>
+                  <th>Meron o Wala</th>
+                  <th>Odds</th>
+                  <th>Combo</th>
+                </tr>
+              </thead>
+              <tbody id="historyTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="panel card">
+          <h2>Combo Percentages</h2>
+          <div id="historyGraph" class="graph-list"></div>
+        </div>
+      </section>
+
+      <section id="meron-wala" class="tab-pane" role="tabpanel">
+        <div class="panel card">
+          <h2>Meron / Wala Streaks</h2>
+          <div id="meronWalaStreaks" class="streak-board"></div>
+        </div>
+
+        <div class="panel card">
+          <h2>Meron / Wala Percentages</h2>
+          <div id="meronWalaGraph" class="graph-list"></div>
+        </div>
+      </section>
+
+      <section id="lyamado-dehado" class="tab-pane" role="tabpanel">
+        <div class="panel card">
+          <h2>Lyamado / Dehado Streaks</h2>
+          <div id="lyamadoDehadoStreaks" class="streak-board"></div>
+        </div>
+
+        <div class="panel card">
+          <h2>Lyamado / Dehado Percentages</h2>
+          <div id="lyamadoDehadoGraph" class="graph-list"></div>
+        </div>
+      </section>
+
+      <section id="statistic" class="tab-pane" role="tabpanel">
+        <div class="panel card">
+          <h2>Statistics</h2>
+          <div class="stat-block">
+            <div>
+              <span class="stat-label">Current Pick</span>
+              <strong id="statSuggestion">PASS</strong>
+            </div>
+            <div>
+              <span class="stat-label">Confidence</span>
+              <strong id="statConfidence">--</strong>
+            </div>
+          </div>
+          <div id="statAnalysis" class="stat-analysis"></div>
+        </div>
+      </section>
+
+      <section id="settings" class="tab-pane" role="tabpanel">
+        <div class="panel card">
+          <h2>Pattern Settings</h2>
+          <label>Pattern Sequence</label>
+          <input id="patternInput" type="text" placeholder="Wala,Wala,Wala,Wala" />
+          <label>Result</label>
+          <input id="patternResultInput" type="text" placeholder="Meron or Wala or PASS" />
+          <div class="button-row">
+            <button id="addPatternButton" class="primary">Add Pattern</button>
+            <button id="cancelPatternButton" class="secondary" style="display:none">Cancel</button>
+          </div>
+          <p class="help-text">Use comma-separated winner patterns. The app will match the most recent sequence against these patterns.</p>
+        </div>
+        <div class="panel card">
+          <h2>Saved Patterns</h2>
+          <div id="patternList" class="pattern-list"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
