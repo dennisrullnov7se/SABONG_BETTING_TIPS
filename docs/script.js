@@ -26,6 +26,11 @@ const addPatternButton = document.getElementById('addPatternButton');
 const patternList = document.getElementById('patternList');
 const tabButtons = document.querySelectorAll('.tab-button');
 const tabPanes = document.querySelectorAll('.tab-pane');
+const patternImportInput = document.getElementById('patternImportInput');
+const importPatternsButton = document.getElementById('importPatternsButton');
+const exportPatternsButton = document.getElementById('exportPatternsButton');
+const exportHistoryButton = document.getElementById('exportHistoryButton');
+const mainForecastEl = document.getElementById('mainForecast');
 
 let entries = [];
 let patterns = [];
@@ -130,14 +135,32 @@ function renderMainView() {
 }
 
 function renderHistory() {
-  historyTableBody.innerHTML = entries.map((entry) => `
+  if (entries.length === 0) {
+    historyTableBody.innerHTML = '<tr><td colspan="7" class="muted">No entries yet.</td></tr>';
+    return;
+  }
+
+  historyTableBody.innerHTML = entries.map((entry, idx) => {
+    const winnersUpToIdx = entries.slice(0, idx + 1).filter(e => VALID_WINNERS.includes(e.winner)).map(e => e.winner);
+    const markov = computeMarkov(winnersUpToIdx);
+    const forecast = markov.forecast || '—';
+    const probability = markov.probability || 0.5;
+    const next = entries[idx + 1];
+    let match = '';
+    if (next && VALID_WINNERS.includes(next.winner)) {
+      match = (forecast === next.winner) ? 'Y' : 'X';
+    }
+    return `
     <tr>
       <td>${entry.start ?? '—'}</td>
       <td>${entry.winner}</td>
       <td>${entry.side}</td>
       <td>${entry.combo}</td>
+      <td>${forecast}</td>
+      <td>${Math.round(probability * 100)}%</td>
+      <td>${match}</td>
     </tr>
-  `).join('') || '<tr><td colspan="4" class="muted">No entries yet.</td></tr>';
+  `}).join('');
 
   const comboData = getCombosCounts();
   const data = COMBOS.map(combo => ({ combo, count: comboData[combo] || 0 }))
@@ -211,6 +234,11 @@ function renderStatistic() {
     }
   }
   statAnalysis.innerHTML = lines.join('');
+}
+
+function computeForecastForLast() {
+  const winners = entries.filter(entry => VALID_WINNERS.includes(entry.winner)).map(entry => entry.winner);
+  return computeMarkov(winners);
 }
 
 function renderSettings() {
@@ -570,6 +598,104 @@ redoButton.addEventListener('click', handleRedo);
 resetButton.addEventListener('click', handleReset);
 addPatternButton.addEventListener('click', addPattern);
 document.getElementById('cancelPatternButton').addEventListener('click', cancelPattern);
+
+// Import patterns from an Excel file (first column = sequence, second column = result)
+function importPatternsFromWorkbookFile(file) {
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
+      const imported = [];
+      rows.forEach((r, i) => {
+        if (i === 0) return; // skip header if present
+        if (!r || r.length === 0) return;
+        const seqRaw = (r[0] || '').toString();
+        const result = (r[1] || '').toString().trim();
+        if (!seqRaw || !result) return;
+        const seq = seqRaw.split(',').map(s => s.trim()).filter(Boolean);
+        if (seq.length === 0) return;
+        imported.push({ id: Date.now() + Math.random(), seq, result });
+      });
+      if (imported.length > 0) {
+        patterns = imported;
+        saveData();
+        renderSettings();
+        renderStatistic();
+        alert('Imported ' + imported.length + ' patterns.');
+      } else {
+        alert('No valid patterns found in file.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Failed to import patterns: ' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+if (patternImportInput) {
+  patternImportInput.addEventListener('change', (e) => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    importPatternsFromWorkbookFile(f);
+    patternImportInput.value = '';
+  });
+}
+
+if (importPatternsButton) {
+  importPatternsButton.addEventListener('click', () => {
+    if (patternImportInput) patternImportInput.click();
+  });
+}
+
+if (exportPatternsButton) {
+  exportPatternsButton.addEventListener('click', () => {
+    const aoa = [['Sequence', 'Result']].concat(patterns.map(p => [p.seq.join(', '), p.result]));
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'patterns');
+    XLSX.writeFile(wb, 'patterns.xlsx');
+  });
+}
+
+if (exportHistoryButton) {
+  exportHistoryButton.addEventListener('click', () => {
+    if (entries.length === 0) { alert('No entries to export.'); return; }
+    const rows = [['Start', 'Winner', 'Side', 'Combo', 'Forecast', 'Probability', 'Match']];
+    for (let i = 0; i < entries.length; i++) {
+      const e = entries[i];
+      const winnersUpToIdx = entries.slice(0, i + 1).filter(en => VALID_WINNERS.includes(en.winner)).map(en => en.winner);
+      const markov = computeMarkov(winnersUpToIdx);
+      const forecast = markov.forecast || '';
+      const probability = Math.round((markov.probability || 0.5) * 100);
+      const next = entries[i + 1];
+      let match = '';
+      if (next && VALID_WINNERS.includes(next.winner)) match = (forecast === next.winner) ? 'Y' : 'X';
+      rows.push([e.start ?? '', e.winner ?? '', e.side ?? '', e.combo ?? '', forecast, probability + '%', match]);
+    }
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'history');
+    const dateStr = (new Date()).toISOString().slice(0,10);
+    const filename = `full_history_${dateStr}.xlsx`;
+    XLSX.writeFile(wb, filename);
+  });
+}
+
+// Update main forecast display whenever main view is rendered
+const originalRenderMainView = renderMainView;
+renderMainView = function() {
+  originalRenderMainView();
+  if (mainForecastEl) {
+    const m = computeForecastForLast();
+    const f = m.forecast || '—';
+    const p = Math.round((m.probability || 0.5) * 100);
+    mainForecastEl.innerHTML = `Forecast: <strong>${f}</strong> (${p}%)`;
+  }
+};
 
 loadData();
 renderTabs();

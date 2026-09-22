@@ -3,15 +3,15 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sabong Tracker</title>
+  <title>Sabong Betting Tips</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <div class="app-shell">
     <header class="app-header">
       <div>
-        <h1>Sabong Tracker</h1>
-        <p>Mobile-friendly tracker with history, streaks, stats, and pattern lookup.</p>
+        <h1>Sabong Betting Tips</h1>
+        <p class="disclaimer">⚠️ Disclaimer: All betting tips and predictions are based on statistical analysis and historical patterns. They are provided for informational purposes only and are not guarantees of actual Sabong results. Please bet responsibly and at your own risk.</p>
       </div>
     </header>
 
@@ -89,11 +89,18 @@
           <div id="pustaNaCard" class="pusta-card">PASS</div>
           <p class="help-text">Suggestion is based on the last 10 entries and Settings patterns. If no pattern matches, it remains PASS.</p>
         </div>
+        <div class="panel card">
+          <h2>Markov Forecast</h2>
+          <div id="mainForecast" class="help-text">No forecast yet.</div>
+        </div>
       </section>
 
       <section id="history" class="tab-pane" role="tabpanel">
         <div class="panel card">
           <h2>Full History</h2>
+          <div class="button-row" style="margin-bottom:8px">
+            <button id="exportHistoryButton" class="secondary">Export Full History (Excel)</button>
+          </div>
           <div class="table-scroll">
             <table class="history-table">
               <thead>
@@ -102,6 +109,9 @@
                   <th>Meron o Wala</th>
                   <th>Odds</th>
                   <th>Combo</th>
+                  <th>Forecast</th>
+                  <th>Probability</th>
+                  <th>Match</th>
                 </tr>
               </thead>
               <tbody id="historyTableBody"></tbody>
@@ -171,12 +181,18 @@
         </div>
         <div class="panel card">
           <h2>Saved Patterns</h2>
+          <div class="button-row" style="margin-bottom:8px">
+            <input id="patternImportInput" type="file" accept=".xlsx,.xls" />
+            <button id="importPatternsButton" class="secondary">Import Patterns (Excel)</button>
+            <button id="exportPatternsButton" class="secondary">Export Patterns (Excel)</button>
+          </div>
           <div id="patternList" class="pattern-list"></div>
         </div>
       </section>
     </main>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
