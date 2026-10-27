@@ -11,7 +11,13 @@
     <header class="app-header">
       <div>
         <h1>Sabong Betting Tips</h1>
-        <p class="disclaimer">⚠️ Disclaimer: All betting tips and predictions are based on statistical analysis and historical patterns. They are provided for informational purposes only and are not guarantees of actual Sabong results. Please bet responsibly and at your own risk.</p>
+        <div class="disclaimer">
+          <button id="disclaimerToggle" class="disclaimer-toggle" type="button" aria-expanded="true" aria-controls="disclaimerDescription">
+            <span class="disclaimer-icon" aria-hidden="true">!</span>
+            <span>Disclaimer:</span>
+          </button>
+          <p id="disclaimerDescription">All betting tips and predictions are based on statistical analysis and historical patterns. They are provided for informational purposes only and are not guarantees of actual Sabong results. Please bet responsibly and at your own risk.</p>
+        </div>
       </div>
     </header>
 
@@ -90,8 +96,9 @@
           <p class="help-text">Suggestion is based on the last 10 entries and Settings patterns. If no pattern matches, it remains PASS.</p>
         </div>
         <div class="panel card">
-          <h2>Markov Forecast</h2>
+          <h2>AI Forecast</h2>
           <div id="mainForecast" class="help-text">No forecast yet.</div>
+          <div id="mainMatchAverages" class="history-match-summary main-match-averages" aria-live="polite"></div>
         </div>
       </section>
 
@@ -122,6 +129,8 @@
         <div class="panel card">
           <h2>Combo Percentages</h2>
           <div id="historyGraph" class="graph-list"></div>
+          <h3 class="history-summary-heading">Prediction Match Summary</h3>
+          <div id="historyMatchSummary" class="history-match-summary" aria-live="polite"></div>
         </div>
       </section>
 

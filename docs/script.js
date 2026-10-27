@@ -13,6 +13,7 @@ const tallyTableBody = document.getElementById('tallyTableBody');
 const pustaNaCard = document.getElementById('pustaNaCard');
 const historyTableBody = document.getElementById('historyTableBody');
 const historyGraph = document.getElementById('historyGraph');
+const historyMatchSummary = document.getElementById('historyMatchSummary');
 const meronWalaStreaks = document.getElementById('meronWalaStreaks');
 const meronWalaGraph = document.getElementById('meronWalaGraph');
 const lyamadoDehadoStreaks = document.getElementById('lyamadoDehadoStreaks');
@@ -31,6 +32,9 @@ const importPatternsButton = document.getElementById('importPatternsButton');
 const exportPatternsButton = document.getElementById('exportPatternsButton');
 const exportHistoryButton = document.getElementById('exportHistoryButton');
 const mainForecastEl = document.getElementById('mainForecast');
+const mainMatchAverages = document.getElementById('mainMatchAverages');
+const disclaimerToggle = document.getElementById('disclaimerToggle');
+const disclaimerDescription = document.getElementById('disclaimerDescription');
 
 let entries = [];
 let patterns = [];
@@ -135,12 +139,56 @@ function renderMainView() {
 }
 
 function renderHistory() {
-  if (entries.length === 0) {
-    historyTableBody.innerHTML = '<tr><td colspan="7" class="muted">No entries yet.</td></tr>';
-    return;
-  }
+  const historyRows = getHistoryRows();
 
-  historyTableBody.innerHTML = entries.map((entry, idx) => {
+  historyTableBody.innerHTML = historyRows.length === 0
+    ? '<tr><td colspan="7" class="muted">No entries yet.</td></tr>'
+    : historyRows.map(({ entry, forecast, probability, match }) => `
+      <tr>
+        <td>${entry.start ?? '—'}</td>
+        <td>${entry.winner}</td>
+        <td>${entry.side}</td>
+        <td>${entry.combo}</td>
+        <td>${forecast}</td>
+        <td>${Math.round(probability * 100)}%</td>
+        <td>${match}</td>
+      </tr>
+    `).join('');
+
+  const comboData = getCombosCounts();
+  const data = COMBOS.map(combo => ({ combo, count: comboData[combo] || 0 }))
+    .filter(item => item.count > 0)
+    .sort((a, b) => a.count - b.count);
+
+  historyGraph.innerHTML = data.length === 0 ? '<div class="result-item">No graph data yet.</div>' : data.map(item => renderBarRow(item.combo, item.count, getComboPercent(item.count))).join('');
+
+  const summary = getMatchSummary(historyRows);
+  historyMatchSummary.innerHTML = `
+    <div class="history-summary-item">
+      <span>Y</span>
+      <strong>${summary.yCount}/${historyRows.length}</strong>
+    </div>
+    <div class="history-summary-item">
+      <span>X</span>
+      <strong>${summary.xCount}/${historyRows.length}</strong>
+    </div>
+    <div class="history-summary-item">
+      <span>Blank</span>
+      <strong>${summary.blankCount}/${historyRows.length}</strong>
+    </div>
+    <div class="history-summary-item">
+      <span>Y Average %</span>
+      <strong>${summary.yAverage}</strong>
+    </div>
+    <div class="history-summary-item">
+      <span>X Average %</span>
+      <strong>${summary.xAverage}</strong>
+    </div>
+  `;
+}
+
+function getHistoryRows() {
+  return entries.map((entry, idx) => {
     const winnersUpToIdx = entries.slice(0, idx + 1).filter(e => VALID_WINNERS.includes(e.winner)).map(e => e.winner);
     const markov = computeMarkov(winnersUpToIdx);
     const forecast = markov.forecast || '—';
@@ -150,24 +198,24 @@ function renderHistory() {
     if (next && VALID_WINNERS.includes(next.winner)) {
       match = (forecast === next.winner) ? 'Y' : 'X';
     }
-    return `
-    <tr>
-      <td>${entry.start ?? '—'}</td>
-      <td>${entry.winner}</td>
-      <td>${entry.side}</td>
-      <td>${entry.combo}</td>
-      <td>${forecast}</td>
-      <td>${Math.round(probability * 100)}%</td>
-      <td>${match}</td>
-    </tr>
-  `}).join('');
+    return { entry, forecast, probability, match };
+  });
+}
 
-  const comboData = getCombosCounts();
-  const data = COMBOS.map(combo => ({ combo, count: comboData[combo] || 0 }))
-    .filter(item => item.count > 0)
-    .sort((a, b) => a.count - b.count);
+function getMatchSummary(historyRows) {
+  const yRows = historyRows.filter(row => row.match === 'Y');
+  const xRows = historyRows.filter(row => row.match === 'X');
+  const averageProbability = rows => rows.length
+    ? `${Math.round(rows.reduce((sum, row) => sum + Math.round(row.probability * 100), 0) / rows.length)}%`
+    : '—';
 
-  historyGraph.innerHTML = data.length === 0 ? '<div class="result-item">No graph data yet.</div>' : data.map(item => renderBarRow(item.combo, item.count, getComboPercent(item.count))).join('');
+  return {
+    yCount: yRows.length,
+    xCount: xRows.length,
+    blankCount: historyRows.length - yRows.length - xRows.length,
+    yAverage: averageProbability(yRows),
+    xAverage: averageProbability(xRows)
+  };
 }
 
 function renderMeronWala() {
@@ -224,10 +272,10 @@ function renderStatistic() {
     lines.push('<p>No valid Meron/Wala entries available yet for statistic analysis.</p>');
   } else {
     lines.push(`<p>Last winner entries: ${winners.join(' → ')}</p>`);
-    lines.push(`<p>Markov forecast after last entry (${winners[winners.length - 1]}): <strong>${forecast}</strong> with probability <strong>${Math.round(probability * 100)}%</strong>.</p>`);
+    lines.push(`<p>AI forecast after last entry (${winners[winners.length - 1]}): <strong>${forecast}</strong> with probability <strong>${Math.round(probability * 100)}%</strong>.</p>`);
     if (suggestion === 'PASS') {
       lines.push('<p>No saved pattern matched the last sequence, so the main recommendation is PASS.</p>');
-      lines.push('<p>If you still want a forecast, the Markov model provides a reference prediction based on historical transitions.</p>');
+      lines.push('<p>If you still want a forecast, the AI model provides a reference prediction based on historical transitions.</p>');
     } else {
       lines.push(`<p>Pattern suggestion from Settings: <strong>${suggestion}</strong>.</p>`);
       lines.push('<p>The confidence level combines that pattern suggestion with the transition probability.</p>');
@@ -599,6 +647,12 @@ resetButton.addEventListener('click', handleReset);
 addPatternButton.addEventListener('click', addPattern);
 document.getElementById('cancelPatternButton').addEventListener('click', cancelPattern);
 
+disclaimerToggle.addEventListener('click', () => {
+  const isExpanded = disclaimerToggle.getAttribute('aria-expanded') === 'true';
+  disclaimerToggle.setAttribute('aria-expanded', String(!isExpanded));
+  disclaimerDescription.hidden = isExpanded;
+});
+
 // Import patterns from an Excel file (first column = sequence, second column = result)
 function importPatternsFromWorkbookFile(file) {
   const reader = new FileReader();
@@ -694,6 +748,19 @@ renderMainView = function() {
     const f = m.forecast || '—';
     const p = Math.round((m.probability || 0.5) * 100);
     mainForecastEl.innerHTML = `Forecast: <strong>${f}</strong> (${p}%)`;
+  }
+  if (mainMatchAverages) {
+    const summary = getMatchSummary(getHistoryRows());
+    mainMatchAverages.innerHTML = `
+      <div class="history-summary-item">
+        <span>Y Average %</span>
+        <strong>${summary.yAverage}</strong>
+      </div>
+      <div class="history-summary-item">
+        <span>X Average %</span>
+        <strong>${summary.xAverage}</strong>
+      </div>
+    `;
   }
 };
 
